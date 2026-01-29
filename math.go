@@ -241,8 +241,10 @@ func (z *Zr) Neg() {
 	z.zr.Neg()
 }
 
-var zerobytes = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-var onebytes = []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+var (
+	zerobytes = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	onebytes  = []byte{255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}
+)
 
 func (z *Zr) Uint() (uint64, error) {
 	b := z.Bytes()
@@ -626,4 +628,18 @@ func (c *Curve) ModAddMul(a1, b1 []*Zr, m *Zr) *Zr {
 
 func (c *Curve) ModAddMul2(a, b, cc, d *Zr, m *Zr) *Zr {
 	return &Zr{zr: c.c.ModAddMul2(a.zr, b.zr, cc.zr, d.zr, m.zr), curveID: c.curveID}
+}
+
+func (c *Curve) AddPairsOfProducts(left []*Zr, right []*Zr, leftgen []*G1, rightgen []*G1, m *Zr) *G1 {
+	leftDriver := make([]driver.Zr, len(left))
+	rightDriver := make([]driver.Zr, len(right))
+	leftgenDriver := make([]driver.G1, len(leftgen))
+	rightgenDriver := make([]driver.G1, len(rightgen))
+	for i := 0; i < len(left); i++ {
+		leftDriver[i] = left[i].zr
+		rightDriver[i] = right[i].zr
+		leftgenDriver[i] = leftgen[i].g1
+		rightgenDriver[i] = rightgen[i].g1
+	}
+	return &G1{g1: c.c.AddPairsOfProducts(leftDriver, rightDriver, leftgenDriver, rightgenDriver), curveID: c.curveID}
 }

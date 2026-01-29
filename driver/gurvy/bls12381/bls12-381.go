@@ -24,9 +24,11 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var g1StrRegexp = regexp.MustCompile(`^E\([[]([0-9]+),([0-9]+)[]]\)$`)
-var g1Bytes12_381 [48]byte
-var g2Bytes12_381 [96]byte
+var (
+	g1StrRegexp   = regexp.MustCompile(`^E\([[]([0-9]+),([0-9]+)[]]\)$`)
+	g1Bytes12_381 [48]byte
+	g2Bytes12_381 [96]byte
+)
 
 // point at infinity
 var g1Infinity bls12381.G1Jac
@@ -596,6 +598,30 @@ func (c *Curve) ModAddMul(a1, b1 []driver.Zr, m driver.Zr) driver.Zr {
 	return res
 }
 
+func (p *Curve) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
+	// sum := leftgen[0].Mul2(left[0], rightgen[0], right[0])
+	// for i := 1; i < len(left); i++ {
+	// 	sum.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
+	// }
+	// return sum
+	tmpJac := G1Jacs.Get()
+	defer G1Jacs.Put(tmpJac)
+	sum := &G1{}
+	tmp := &G1{}
+
+	for i := 0; i < len(left); i++ {
+		tmpJac = JointScalarMultiplication(tmpJac, &leftgen[i].(*G1).G1Affine, &rightgen[i].(*G1).G1Affine, &left[i].(*Zr).Int, &right[i].(*Zr).Int)
+		tmp.G1Affine.FromJacobian(tmpJac)
+		if i == 0 {
+			sum.G1Affine.Set(&tmp.G1Affine)
+		} else {
+			sum.Add(tmp)
+		}
+	}
+
+	return sum
+}
+
 func (c *Curve) ModAddMul2(a1 driver.Zr, c1 driver.Zr, b1 driver.Zr, c2 driver.Zr, m driver.Zr) driver.Zr {
 	aFr := frElements.Get()
 	defer frElements.Put(aFr)
@@ -777,5 +803,4 @@ func JointScalarMultiplication(p *bls12381.G1Jac, a1, a2 *bls12381.G1Affine, s1,
 
 	p.Set(&res)
 	return p
-
 }
