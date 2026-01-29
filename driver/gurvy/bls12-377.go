@@ -8,6 +8,7 @@ package gurvy
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/IBM/mathlib/driver"
@@ -15,6 +16,8 @@ import (
 	bls12377 "github.com/consensys/gnark-crypto/ecc/bls12-377"
 	"github.com/consensys/gnark-crypto/ecc/bls12-377/fr"
 )
+
+var g1StrRegexp = regexp.MustCompile(`^E\([[]([0-9]+),([0-9]+)[]]\)$`)
 
 /*********************************************************************/
 

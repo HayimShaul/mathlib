@@ -598,12 +598,16 @@ func (c *Curve) ModAddMul(a1, b1 []driver.Zr, m driver.Zr) driver.Zr {
 	return res
 }
 
+// Strauss-Shamir tecnique for Adding Pair of Products.
+//   - For each i, it computes the pair (left[i], leftgen[i]) and (right[i], rightgen[i])
+//     using JointScalarMultiplication in Jacobian coordinates.
+//     tmpJac = JointScalarMultiplication(tmpJac, $L_i_aff, R_i_aff, l_i, r_i$)
+//     This yields a Jacobian point representing ($l_i * L_i + r_i * R_i$).
+//   - The Jacobian result is converted to affine once per iteration:
+//     tmp.G1Affine.FromJacobian(tmpJac)
+//   - The affine point is then accumulated into `sum` using group addition.
+//   - A pooled Jacobian temporary (G1Jacs.Get/Put) is used to reduce allocations.
 func (p *Curve) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
-	// sum := leftgen[0].Mul2(left[0], rightgen[0], right[0])
-	// for i := 1; i < len(left); i++ {
-	// 	sum.Add(leftgen[i].Mul2(left[i], rightgen[i], right[i]))
-	// }
-	// return sum
 	tmpJac := G1Jacs.Get()
 	defer G1Jacs.Put(tmpJac)
 	sum := &G1{}

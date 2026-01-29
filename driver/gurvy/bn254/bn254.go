@@ -4,10 +4,11 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package gurvy
+package bn254
 
 import (
 	"fmt"
+	"math/big"
 	"regexp"
 	"strings"
 
@@ -228,6 +229,34 @@ func (c *Bn254) Pairing(p2 driver.G2, p1 driver.G1) driver.Gt {
 	return &bn254Gt{t}
 }
 
+// Strauss-Shamir tecnique for Adding Pair of Products.
+//   - For each i, it computes the pair (left[i], leftgen[i]) and (right[i], rightgen[i])
+//     using JointScalarMultiplication in Jacobian coordinates.
+//     tmpJac = JointScalarMultiplication(tmpJac, $L_i_aff, R_i_aff, l_i, r_i$)
+//     This yields a Jacobian point representing ($l_i * L_i + r_i * R_i$).
+//   - The Jacobian result is converted to affine once per iteration:
+//     tmp.G1Affine.FromJacobian(tmpJac)
+//   - The affine point is then accumulated into `sum` using group addition.
+//   - A pooled Jacobian temporary (G1Jacs.Get/Put) is used to reduce allocations.
+func (p *Bn254) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
+	tmpJac := G1Jacs.Get()
+	defer G1Jacs.Put(tmpJac)
+	sum := &bn254G1{}
+	tmp := &bn254G1{}
+
+	for i := 0; i < len(left); i++ {
+		tmpJac = JointScalarMultiplication(tmpJac, &leftgen[i].(*bn254G1).G1Affine, &rightgen[i].(*bn254G1).G1Affine, &left[i].(*common.BaseZr).Int, &right[i].(*common.BaseZr).Int)
+		tmp.G1Affine.FromJacobian(tmpJac)
+		if i == 0 {
+			sum.G1Affine.Set(&tmp.G1Affine)
+		} else {
+			sum.Add(tmp)
+		}
+	}
+
+	return sum
+}
+
 func (c *Bn254) Pairing2(p2a, p2b driver.G2, p1a, p1b driver.G1) driver.Gt {
 	t, err := bn254.MillerLoop([]bn254.G1Affine{p1a.(*bn254G1).G1Affine, p1b.(*bn254G1).G1Affine}, []bn254.G2Affine{p2a.(*bn254G2).G2Affine, p2b.(*bn254G2).G2Affine})
 	if err != nil {
@@ -241,13 +270,20 @@ func (c *Bn254) FExp(a driver.Gt) driver.Gt {
 	return &bn254Gt{bn254.FinalExponentiation(&a.(*bn254Gt).GT)}
 }
 
-var g1Bytes254 [32]byte
-var g2Bytes254 [64]byte
+var (
+	g1Bytes254 [32]byte
+	g2Bytes254 [64]byte
+)
+
+// point at infinity
+var g1Infinity bn254.G1Jac
 
 func init() {
 	_, _, g1, g2 := bn254.Generators()
 	g1Bytes254 = g1.Bytes()
 	g2Bytes254 = g2.Bytes()
+	g1Infinity.X.SetOne()
+	g1Infinity.Y.SetOne()
 }
 
 func (c *Bn254) GenG1() driver.G1 {
@@ -394,4 +430,73 @@ func (p *Bn254) HashToG2WithDomain(data, domain []byte) driver.G2 {
 	}
 
 	return &bn254G2{g2}
+}
+
+// JointScalarMultiplication computes [s1]a1+[s2]a2 using Strauss-Shamir technique
+// where a1 and a2 are affine points.
+func JointScalarMultiplication(p *bn254.G1Jac, a1, a2 *bn254.G1Affine, s1, s2 *big.Int) *bn254.G1Jac {
+	var res, p1, p2 bn254.G1Jac
+	res.Set(&g1Infinity)
+	p1.FromAffine(a1)
+	p2.FromAffine(a2)
+
+	var table [15]bn254.G1Jac
+
+	var k1, k2 big.Int
+	if s1.Sign() == -1 {
+		k1.Neg(s1)
+		table[0].Neg(&p1)
+	} else {
+		k1 = *s1
+		table[0].Set(&p1)
+	}
+	if s2.Sign() == -1 {
+		k2.Neg(s2)
+		table[3].Neg(&p2)
+	} else {
+		k2 = *s2
+		table[3].Set(&p2)
+	}
+
+	// precompute table (2 bits sliding window)
+	table[1].Double(&table[0])
+	table[2].Set(&table[1]).AddAssign(&table[0])
+	table[4].Set(&table[3]).AddAssign(&table[0])
+	table[5].Set(&table[3]).AddAssign(&table[1])
+	table[6].Set(&table[3]).AddAssign(&table[2])
+	table[7].Double(&table[3])
+	table[8].Set(&table[7]).AddAssign(&table[0])
+	table[9].Set(&table[7]).AddAssign(&table[1])
+	table[10].Set(&table[7]).AddAssign(&table[2])
+	table[11].Set(&table[7]).AddAssign(&table[3])
+	table[12].Set(&table[11]).AddAssign(&table[0])
+	table[13].Set(&table[11]).AddAssign(&table[1])
+	table[14].Set(&table[11]).AddAssign(&table[2])
+
+	var s [2]fr.Element
+	s[0] = s[0].SetBigInt(&k1).Bits()
+	s[1] = s[1].SetBigInt(&k2).Bits()
+
+	maxBit := k1.BitLen()
+	if k2.BitLen() > maxBit {
+		maxBit = k2.BitLen()
+	}
+	hiWordIndex := (maxBit - 1) / 64
+
+	for i := hiWordIndex; i >= 0; i-- {
+		mask := uint64(3) << 62
+		for j := 0; j < 32; j++ {
+			res.Double(&res).Double(&res)
+			b1 := (s[0][i] & mask) >> (62 - 2*j)
+			b2 := (s[1][i] & mask) >> (62 - 2*j)
+			if b1|b2 != 0 {
+				s := (b2<<2 | b1)
+				res.AddAssign(&table[s-1])
+			}
+			mask = mask >> 2
+		}
+	}
+
+	p.Set(&res)
+	return p
 }

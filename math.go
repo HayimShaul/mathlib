@@ -16,6 +16,7 @@ import (
 	"github.com/IBM/mathlib/driver/amcl"
 	"github.com/IBM/mathlib/driver/gurvy"
 	"github.com/IBM/mathlib/driver/gurvy/bls12381"
+	"github.com/IBM/mathlib/driver/gurvy/bn254"
 	"github.com/IBM/mathlib/driver/kilic"
 	"github.com/pkg/errors"
 )
@@ -74,17 +75,17 @@ var Curves []*Curve = []*Curve{
 		FP256BN_AMCL,
 	),
 	{
-		c:                    gurvy.NewBn254(),
-		GenG1:                NewG1((&gurvy.Bn254{}).GenG1(), BN254),
-		GenG2:                NewG2((&gurvy.Bn254{}).GenG2(), BN254),
-		GenGt:                NewGt((&gurvy.Bn254{}).GenGt(), BN254),
-		GroupOrder:           NewZr(gurvy.NewBn254().GroupOrder(), BN254),
-		CoordByteSize:        (&gurvy.Bn254{}).CoordinateByteSize(),
-		G1ByteSize:           (&gurvy.Bn254{}).G1ByteSize(),
-		CompressedG1ByteSize: (&gurvy.Bn254{}).CompressedG1ByteSize(),
-		G2ByteSize:           (&gurvy.Bn254{}).G2ByteSize(),
-		CompressedG2ByteSize: (&gurvy.Bn254{}).CompressedG2ByteSize(),
-		ScalarByteSize:       (&gurvy.Bn254{}).ScalarByteSize(),
+		c:                    bn254.NewBn254(),
+		GenG1:                NewG1((&bn254.Bn254{}).GenG1(), BN254),
+		GenG2:                NewG2((&bn254.Bn254{}).GenG2(), BN254),
+		GenGt:                NewGt((&bn254.Bn254{}).GenGt(), BN254),
+		GroupOrder:           NewZr(bn254.NewBn254().GroupOrder(), BN254),
+		CoordByteSize:        (&bn254.Bn254{}).CoordinateByteSize(),
+		G1ByteSize:           (&bn254.Bn254{}).G1ByteSize(),
+		CompressedG1ByteSize: (&bn254.Bn254{}).CompressedG1ByteSize(),
+		G2ByteSize:           (&bn254.Bn254{}).G2ByteSize(),
+		CompressedG2ByteSize: (&bn254.Bn254{}).CompressedG2ByteSize(),
+		ScalarByteSize:       (&bn254.Bn254{}).ScalarByteSize(),
 		curveID:              BN254,
 	},
 	{

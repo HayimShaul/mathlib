@@ -101,6 +101,10 @@ func (p *CurveBase) ModAddMul2(a1 driver.Zr, c1 driver.Zr, b1 driver.Zr, c2 driv
 	return p.ModAdd(p.ModMul(a1, c1, m), p.ModMul(b1, c2, m), m)
 }
 
+// AddPairsOfProducts is the following equation:
+// $$
+// \sum_{i=0}^{n-1} \left( \left( \text{leftgen}[i] \cdot \text{left}[i] \right) \cdot \left( \text{rightgen}[i] \cdot \text{right}[i] \right) \right) = \text{sum}
+// $$
 func (p *CurveBase) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
 	sum := leftgen[0].Mul2(left[0], rightgen[0], right[0])
 	for i := 1; i < len(left); i++ {
