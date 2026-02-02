@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package gurvy
+package bls12377
 
 import (
 	"fmt"
@@ -241,8 +241,10 @@ func (c *Bls12_377) FExp(a driver.Gt) driver.Gt {
 	return &bls12377Gt{bls12377.FinalExponentiation(&a.(*bls12377Gt).GT)}
 }
 
-var g1Bytes12_377 [48]byte
-var g2Bytes12_377 [96]byte
+var (
+	g1Bytes12_377 [48]byte
+	g2Bytes12_377 [96]byte
+)
 
 func init() {
 	_, _, g1, g2 := bls12377.Generators()

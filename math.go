@@ -14,8 +14,8 @@ import (
 
 	"github.com/IBM/mathlib/driver"
 	"github.com/IBM/mathlib/driver/amcl"
-	"github.com/IBM/mathlib/driver/gurvy"
 	"github.com/IBM/mathlib/driver/gurvy/bls12381"
+	bls12377 "github.com/IBM/mathlib/driver/gurvy/bls12_377"
 	"github.com/IBM/mathlib/driver/gurvy/bn254"
 	"github.com/IBM/mathlib/driver/kilic"
 	"github.com/pkg/errors"
@@ -117,17 +117,17 @@ var Curves []*Curve = []*Curve{
 		curveID:              BLS12_381,
 	},
 	{
-		c:                    gurvy.NewBls12_377(),
-		GenG1:                NewG1((&gurvy.Bls12_377{}).GenG1(), BLS12_377_GURVY),
-		GenG2:                NewG2((&gurvy.Bls12_377{}).GenG2(), BLS12_377_GURVY),
-		GenGt:                NewGt((&gurvy.Bls12_377{}).GenGt(), BLS12_377_GURVY),
-		GroupOrder:           NewZr(gurvy.NewBls12_377().GroupOrder(), BLS12_377_GURVY),
-		CoordByteSize:        (&gurvy.Bls12_377{}).CoordinateByteSize(),
-		G1ByteSize:           (&gurvy.Bls12_377{}).G1ByteSize(),
-		CompressedG1ByteSize: (&gurvy.Bls12_377{}).CompressedG1ByteSize(),
-		G2ByteSize:           (&gurvy.Bls12_377{}).G2ByteSize(),
-		CompressedG2ByteSize: (&gurvy.Bls12_377{}).CompressedG2ByteSize(),
-		ScalarByteSize:       (&gurvy.Bls12_377{}).ScalarByteSize(),
+		c:                    bls12377.NewBls12_377(),
+		GenG1:                NewG1((&bls12377.Bls12_377{}).GenG1(), BLS12_377_GURVY),
+		GenG2:                NewG2((&bls12377.Bls12_377{}).GenG2(), BLS12_377_GURVY),
+		GenGt:                NewGt((&bls12377.Bls12_377{}).GenGt(), BLS12_377_GURVY),
+		GroupOrder:           NewZr(bls12377.NewBls12_377().GroupOrder(), BLS12_377_GURVY),
+		CoordByteSize:        (&bls12377.Bls12_377{}).CoordinateByteSize(),
+		G1ByteSize:           (&bls12377.Bls12_377{}).G1ByteSize(),
+		CompressedG1ByteSize: (&bls12377.Bls12_377{}).CompressedG1ByteSize(),
+		G2ByteSize:           (&bls12377.Bls12_377{}).G2ByteSize(),
+		CompressedG2ByteSize: (&bls12377.Bls12_377{}).CompressedG2ByteSize(),
+		ScalarByteSize:       (&bls12377.Bls12_377{}).ScalarByteSize(),
 		curveID:              BLS12_377_GURVY,
 	},
 	{
