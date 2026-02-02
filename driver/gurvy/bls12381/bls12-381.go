@@ -598,32 +598,34 @@ func (c *Curve) ModAddMul(a1, b1 []driver.Zr, m driver.Zr) driver.Zr {
 	return res
 }
 
-// Strauss-Shamir tecnique for Adding Pair of Products.
-//   - For each i, it computes the pair (left[i], leftgen[i]) and (right[i], rightgen[i])
-//     using JointScalarMultiplication in Jacobian coordinates.
-//     tmpJac = JointScalarMultiplication(tmpJac, $L_i_aff, R_i_aff, l_i, r_i$)
-//     This yields a Jacobian point representing ($l_i * L_i + r_i * R_i$).
-//   - The Jacobian result is converted to affine once per iteration:
-//     tmp.G1Affine.FromJacobian(tmpJac)
-//   - The affine point is then accumulated into `sum` using group addition.
-//   - A pooled Jacobian temporary (G1Jacs.Get/Put) is used to reduce allocations.
+// AddPairsOfProducts adds pairs of products of the given elements
+//
+// The function takes in two lists of elements: left and right, each of
+// length n, and two lists of generators: leftgen and rightgen, each of
+// length n. The function returns the sum of the pairs of products.
+//
+// The function uses the JointScalarMultiplication function to compute
+// the pair (left[i], leftgen[i]) and (right[i], rightgen[i]) for each i,
+// and adds the result to the sum. The sum is then returned.
 func (p *Curve) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
 	tmpJac := G1Jacs.Get()
+	sum := G1Jacs.Get()
 	defer G1Jacs.Put(tmpJac)
-	sum := &G1{}
-	tmp := &G1{}
+	defer G1Jacs.Put(sum)
+	result := &G1{}
 
 	for i := 0; i < len(left); i++ {
 		tmpJac = JointScalarMultiplication(tmpJac, &leftgen[i].(*G1).G1Affine, &rightgen[i].(*G1).G1Affine, &left[i].(*Zr).Int, &right[i].(*Zr).Int)
-		tmp.G1Affine.FromJacobian(tmpJac)
+
 		if i == 0 {
-			sum.G1Affine.Set(&tmp.G1Affine)
+			sum.Set(tmpJac)
 		} else {
-			sum.Add(tmp)
+			sum.AddAssign(tmpJac)
 		}
 	}
+	result.G1Affine.FromJacobian(sum)
 
-	return sum
+	return result
 }
 
 func (c *Curve) ModAddMul2(a1 driver.Zr, c1 driver.Zr, b1 driver.Zr, c2 driver.Zr, m driver.Zr) driver.Zr {
