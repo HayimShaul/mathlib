@@ -240,21 +240,22 @@ func (c *Bn254) Pairing(p2 driver.G2, p1 driver.G1) driver.Gt {
 //   - A pooled Jacobian temporary (G1Jacs.Get/Put) is used to reduce allocations.
 func (p *Bn254) AddPairsOfProducts(left []driver.Zr, right []driver.Zr, leftgen []driver.G1, rightgen []driver.G1) driver.G1 {
 	tmpJac := G1Jacs.Get()
+	sum := G1Jacs.Get()
 	defer G1Jacs.Put(tmpJac)
-	sum := &bn254G1{}
-	tmp := &bn254G1{}
+	defer G1Jacs.Put(sum)
 
 	for i := 0; i < len(left); i++ {
 		tmpJac = JointScalarMultiplication(tmpJac, &leftgen[i].(*bn254G1).G1Affine, &rightgen[i].(*bn254G1).G1Affine, &left[i].(*common.BaseZr).Int, &right[i].(*common.BaseZr).Int)
-		tmp.G1Affine.FromJacobian(tmpJac)
 		if i == 0 {
-			sum.G1Affine.Set(&tmp.G1Affine)
+			sum.Set(tmpJac)
 		} else {
-			sum.Add(tmp)
+			sum.AddAssign(tmpJac)
 		}
 	}
 
-	return sum
+	res := &bn254G1{}
+	res.G1Affine.FromJacobian(sum)
+	return res
 }
 
 func (c *Bn254) Pairing2(p2a, p2b driver.G2, p1a, p1b driver.G1) driver.Gt {
