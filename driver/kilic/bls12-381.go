@@ -235,6 +235,14 @@ type Bls12_381 struct {
 	common.CurveBase
 }
 
+func (c *Bls12_381) MultiScalarMul(a []driver.G1, b []driver.Zr) driver.G1 {
+	g1 := c.NewG1()
+	for i := 0; i < len(a); i++ {
+		g1.Add(a[i].Mul(b[i]))
+	}
+	return g1
+}
+
 type Bls12_381BBS struct {
 	Bls12_381
 }
