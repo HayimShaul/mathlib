@@ -54,19 +54,19 @@ func (g *bn254G1) Mul(a driver.Zr) driver.G1 {
 }
 
 func (g *bn254G1) Mul2(e driver.Zr, Q driver.G1, f driver.Zr) driver.G1 {
-	a := g.Mul(e)
-	b := Q.Mul(f)
-	a.Add(b)
-
-	return a
+	first := G1Jacs.Get()
+	defer G1Jacs.Put(first)
+	first = JointScalarMultiplication(first, &g.G1Affine, &Q.(*bn254G1).G1Affine, &e.(*common.BaseZr).Int, &f.(*common.BaseZr).Int)
+	gc := &bn254G1{}
+	gc.G1Affine.FromJacobian(first)
+	return gc
 }
 
 func (g *bn254G1) Mul2InPlace(e driver.Zr, Q driver.G1, f driver.Zr) {
-	a := g.Mul(e)
-	b := Q.Mul(f)
-	a.Add(b)
-
-	g.Set(&a.(*bn254G1).G1Affine)
+	first := G1Jacs.Get()
+	defer G1Jacs.Put(first)
+	first = JointScalarMultiplication(first, &g.G1Affine, &Q.(*bn254G1).G1Affine, &e.(*common.BaseZr).Int, &f.(*common.BaseZr).Int)
+	g.G1Affine.FromJacobian(first)
 }
 
 func (g *bn254G1) Equals(a driver.G1) bool {
